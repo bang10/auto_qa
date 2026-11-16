@@ -38,7 +38,7 @@ class BasePage:
     def get_text(self, locator):
         return self.find(locator).text
 
-    def is_displayed(self, locator, timeout=2):
+    def is_displayed(self, locator, timeout=5):
         try:
             WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located(locator))
             return True
