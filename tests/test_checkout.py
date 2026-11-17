@@ -14,18 +14,18 @@ def test_complete_checkout_flow(logged_in_driver):
     step_two_page = CheckoutStepTwoPage(logged_in_driver)
     complete_page = CheckoutCompletePage(logged_in_driver)
 
-    # 1) 상품 2개 담고 장바구니 이동 후 Checkout 클릭
+    # 상품 2개 담고 장바구니 이동 후 Checkout 클릭
     inventory_page.add_to_cart_by_name("Sauce Labs Backpack")     # $29.99
     inventory_page.add_to_cart_by_name("Sauce Labs Bike Light")   # $9.99
     inventory_page.go_to_cart()
     cart_page.proceed_to_checkout()
 
-    # 2) Step 1: 배송 정보 입력
+    # Step 1: 배송 정보 입력
     assert step_one_page.get_title() == "Checkout: Your Information"
     step_one_page.enter_shipping_info("Gildong", "Hong", "13529")
     step_one_page.click_continue()
 
-    # 3) Step 2: 상품 합계 + 세금 = 최종 결제 금액 일치 여부 검증
+    # Step 2: 상품 합계 + 세금 = 최종 결제 금액 일치 여부 검증
     assert step_two_page.get_title() == "Checkout: Overview"
     item_total = step_two_page.get_item_total()
     tax = step_two_page.get_tax()
@@ -35,7 +35,7 @@ def test_complete_checkout_flow(logged_in_driver):
     assert round(item_total + tax, 2) == total
     step_two_page.click_finish()
 
-    # 4) Complete: 주문 완료 화면 및 장바구니 뱃지 초기화 확인
+    # Complete: 주문 완료 화면 및 장바구니 뱃지 초기화 확인
     assert complete_page.get_title() == "Checkout: Complete!"
     assert complete_page.get_complete_message() == "Thank you for your order!"
     assert inventory_page.get_cart_badge_count() == 0
