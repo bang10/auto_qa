@@ -1,4 +1,5 @@
 import os
+from config.config import Config
 import pytest
 from datetime import datetime
 from selenium import webdriver
@@ -16,6 +17,8 @@ SCREENSHOT_DIR = os.path.join(REPORT_DIR, "screenshots")
 VIDEO_DIR = os.path.join(REPORT_DIR, "videos")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 os.makedirs(VIDEO_DIR, exist_ok=True)
+DOWNLOAD_DIR = os.path.abspath(os.path.join(REPORT_DIR, "downloads"))
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 @pytest.fixture(scope="function")
 def driver(request):
@@ -24,13 +27,25 @@ def driver(request):
     prefs = {
         "credentials_enable_service": False,
         "profile.password_manager_enabled": False,
-        "profile.password_manager_leak_detection": False
+        "profile.password_manager_leak_detection": False,
+        "download.default_directory": DOWNLOAD_DIR,
+        "download.prompt_for_download": False,
+        "plugins.always_open_pdf_externally": True
     }
     options.add_experimental_option("prefs", prefs)
     options.add_argument("--disable-features=PasswordLeakDetection")
     options.add_argument("--guest")
 
     driver = webdriver.Chrome(options=options)
+
+    # 다운로드 저장 팝업 미노출 처리
+    driver.execute_cdp_cmd(
+        "Page.setDownloadBehavior",
+        {
+            "behavior": "allow",
+            "downloadPath": DOWNLOAD_DIR
+        }
+    )
 
     # 테스트 시작 시 동영상 녹화 시작
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -48,7 +63,7 @@ def driver(request):
     recorder.stop()
     driver.quit()
 
-    # 테스트가 실패하지 않았다면(성공 시) 용량 관리를 위해 녹화 파일 삭제
+    # 테스트 성공 시 녹화 파일 삭제
     rep_call = getattr(request.node, "rep_call", None)
     if rep_call is None or not rep_call.failed:
         if os.path.exists(video_path):
@@ -58,7 +73,8 @@ def driver(request):
 def logged_in_driver(driver):
     login_page = LoginPage(driver)
     login_page.load()
-    login_page.login("standard_user", "secret_sauce")
+    # 필요한 계정으로 수정
+    login_page.login(Config.STANDARD_USER, Config.PASSWORD)
     return driver
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -112,7 +128,7 @@ def pytest_configure(config):
     
     # QA 리포트에 꼭 필요한 핵심 환경 정보만 추가
     config.stash[metadata_key]["프로젝트명"] = "SauceDemo E2E Web Automation"
-    config.stash[metadata_key]["테스트 대상 URL"] = "https://www.saucedemo.com/"
+    config.stash[metadata_key]["테스트 대상 URL"] = Config.BASE_URL
     config.stash[metadata_key]["브라우저"] = "Google Chrome (Guest Mode)"
     config.stash[metadata_key]["OS / Python"] = f"{platform.system()} {platform.release()} / Python {platform.python_version()}"
     config.stash[metadata_key]["테스트 실행 일시"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

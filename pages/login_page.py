@@ -1,8 +1,9 @@
 from selenium.webdriver.common.by import By
 from pages.base_page import BasePage
+from config.config import Config
 
 class LoginPage(BasePage):
-    URL = "https://www.saucedemo.com/"
+    URL = Config.BASE_URL
 
     USERNAME_INPUT = (By.ID, "user-name")
     PASSWORD_INPUT = (By.ID, "password")
@@ -12,7 +13,7 @@ class LoginPage(BasePage):
     def load(self):
         self.open(self.URL)
 
-    def login(self, username, password):
+    def login(self, username, password=Config.PASSWORD):
         self.type_text(self.USERNAME_INPUT, username)
         self.type_text(self.PASSWORD_INPUT, password)
         self.click(self.LOGIN_BUTTON)
@@ -21,4 +22,3 @@ class LoginPage(BasePage):
         return self.get_text(self.ERROR_MESSAGE)
 
 
-    
