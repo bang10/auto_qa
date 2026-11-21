@@ -1,3 +1,4 @@
+import html
 import os
 from config.config import Config
 import pytest
@@ -377,6 +378,35 @@ def pytest_html_results_summary(prefix, summary, postfix, session):
     if not stats or stats["total"] == 0:
         return
 
+    # abort_reason 가져오기
+    abort_reason = _abort_reason or getattr(session.config, "_abort_reason", None)
+
+    # 조기 중단 사유가 존재할 경우 상단 카드 위에 붉은색 경고 배너 생성
+    abort_banner_html = ""
+    if abort_reason:
+        # 슬랙 마크다운 백틱 제거 및 HTML 이스케이프 처리
+        clean_reason = html.escape(abort_reason.replace("`", "'"))
+        abort_banner_html = f"""
+        <div style="
+            background-color: #fef2f2;
+            border: 1px solid #f87171;
+            border-left: 6px solid #dc2626;
+            color: #991b1b;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.08);
+        ">
+            <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;">
+                🚨 테스트 세션 조기 종료
+            </div>
+            <div style="font-size: 13.5px; line-height: 1.5;">
+                {clean_reason}
+            </div>
+        </div>
+        """
+
     total = stats["total"]
     passed = stats["passed"]
     failed = stats["failed"]
@@ -386,39 +416,39 @@ def pytest_html_results_summary(prefix, summary, postfix, session):
     # 성공률 계산 (전체 수집 건수 기준)
     pass_rate = (passed / total * 100) if total > 0 else 0.0
 
-    prefix.extend([
-        "<div style='padding: 16px 20px; margin: 12px 0; background-color: #f8f9fa; border: 1px solid #dee2e6; border-left: 6px solid #2c7be5; border-radius: 6px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;'>",
-        "  <div style='font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 12px;'>",
-        "    📊 QA 자동화 테스트 실행 요약 (Execution Summary)",
-        "  </div>",
-        "  <div style='display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;'>",
-        f"    <div style='background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 18px; min-width: 110px;'>"
-        f"      <div style='font-size: 12px; color: #64748b;'>총 테스트 (Total)</div>"
-        f"      <div style='font-size: 20px; font-weight: 700; color: #0f172a;'>{total}건</div>"
-        f"    </div>",
-        f"    <div style='background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px 18px; min-width: 110px;'>"
-        f"      <div style='font-size: 12px; color: #059669;'>성공 (Pass)</div>"
-        f"      <div style='font-size: 20px; font-weight: 700; color: #047857;'>{passed}건</div>"
-        f"    </div>",
-        f"    <div style='background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 10px 18px; min-width: 110px;'>"
-        f"      <div style='font-size: 12px; color: #dc2626;'>실패 (Fail)</div>"
-        f"      <div style='font-size: 20px; font-weight: 700; color: #b91c1c;'>{failed}건</div>"
-        f"    </div>",
-        f"    <div style='background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 18px; min-width: 110px;'>"
-        f"      <div style='font-size: 12px; color: #d97706;'>미진행 (Not Run)</div>"
-        f"      <div style='font-size: 20px; font-weight: 700; color: #b45309;'>{not_run}건</div>"
-        f"    </div>",
-        f"    <div style='background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 18px; min-width: 130px;'>"
-        f"      <div style='font-size: 12px; color: #2563eb;'>성공률 / 소요 시간</div>"
-        f"      <div style='font-size: 18px; font-weight: 700; color: #1d4ed8;'>{pass_rate:.1f}% <span style='font-size: 14px; font-weight: 500;'>({duration_str})</span></div>"
-        f"    </div>",
-        "  </div>",
-        "  <div style='font-size: 13px; color: #475569;'>",
-        "    ※ 강제 종료(Ctrl+C) 또는 오류로 중단된 경우, 실행되지 않은 나머지 케이스는 <strong>미진행(Not Run)</strong>으로 자동 집계됩니다.<br>",
-        "    ※ <strong>실패(Failed)</strong> 행을 클릭하면 실패 순간의 스크린샷과 전체 실행 동영상(MP4) 링크를 바로 확인할 수 있습니다.",
-        "  </div>",
-        "</div>"
-    ])
+    dashboard_html = f"""
+    <div style="margin: 16px 0 24px 0;">
+        {abort_banner_html}
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="font-size: 12px; color: #64748b; font-weight: 600;">전체 테스트 (Total)</div>
+                <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin-top: 4px;">{total}건</div>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="font-size: 12px; color: #166534; font-weight: 600;">성공 (Pass)</div>
+                <div style="font-size: 24px; font-weight: 700; color: #15803d; margin-top: 4px;">{passed}건</div>
+            </div>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="font-size: 12px; color: #991b1b; font-weight: 600;">실패 (Fail)</div>
+                <div style="font-size: 24px; font-weight: 700; color: #dc2626; margin-top: 4px;">{failed}건</div>
+            </div>
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="font-size: 12px; color: #92400e; font-weight: 600;">미진행 (Not Run)</div>
+                <div style="font-size: 24px; font-weight: 700; color: #d97706; margin-top: 4px;">{not_run}건</div>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="font-size: 12px; color: #1e40af; font-weight: 600;">통과율 / 소요 시간</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1d4ed8; margin-top: 6px;">{pass_rate:.1f}% <span style="font-size: 13px; font-weight: 500;">({duration_str})</span></div>
+            </div>
+        </div>
+    </div>
+    """
+    prefix.append(dashboard_html)
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """전체 테스트 종료 후, 최종 집계 및 알림 전송"""
