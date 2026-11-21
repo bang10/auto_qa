@@ -67,16 +67,27 @@ class SlackNotifier:
             print(f"[Slack 알림 오류 - 실패 첨부] {e.response['error']}")
 
     # 3. 테스트 종료 요약 알림
-    def send_finish_notification(self, total, passed, failed, not_run, elapsed_seconds, report_path=None, platform_label="PC"):
+    def send_finish_notification(self, total, passed, failed, not_run, elapsed_seconds, report_path=None, platform_label="PC", abort_reason=None):
         if not self.enabled:
             return
         date_str = self._get_formatted_date()
         duration_str = self._format_duration(elapsed_seconds)
-        status_emoji = "✅" if (failed == 0 and not_run == 0) else "⚠️"
+        if abort_reason:
+            # 필수 로그인 실패 등으로 세션이 조기 종료된 경우
+            header = f"🚨 *[{platform_label}] {date_str} 자동화 테스트 조기 종료 알림 (로그인 실패)*"
+            reason_line = f"*중단 사유:* {abort_reason}\n"
+        elif failed == 0 and not_run == 0:
+            header = f"✅ *[{platform_label}] {date_str} {total}건 자동화 테스트 종료 알림*"
+            reason_line = ""
+        else:
+            header = f"⚠️ *[{platform_label}] {date_str} {total}건 자동화 테스트 종료 알림*"
+            reason_line = ""
+
         summary_text = (
-            f" {status_emoji} *[{platform_label}] {date_str} {total}건 자동화 테스트 종료 알림*\n"
-            f"총 *{total}건*, 성공 *{passed}건*, 실패 *{failed}건*, 미진행 *{not_run}건*, 성공률 *{round(passed/total, 4) * 100}%*\n"
-            f"소요 시간: {duration_str}"
+        f"{header}\n"
+        f"{reason_line}"
+        f"*실행 결과:* 총 *{total}건*, pass *{passed}건*, fail *{failed}건*, 미진행 *{not_run}건*\n"
+        f"*소요 시간:* {duration_str}"
         )
         try:
             # 최종 HTML 보고서 파일이 존재하면 메시지와 함께 파일 업로드
@@ -87,8 +98,8 @@ class SlackNotifier:
                     title=f"[{platform_label}]자동화 테스트 종합 보고서 ({date_str})",
                     initial_comment=summary_text
                 )
-            self.client.chat_postMessage(channel=self.channel, text=summary_text)
+            else:
+                self.client.chat_postMessage(channel=self.channel, text=summary_text)
         except SlackApiError as e:
             print(f"[Slack 알림 오류 - 종료] {e.response['error']}")
-
 

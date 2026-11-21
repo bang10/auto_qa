@@ -21,6 +21,7 @@ SCREENSHOT_DIR = os.path.join(REPORT_DIR, "screenshots")
 VIDEO_DIR = os.path.join(REPORT_DIR, "videos")
 LOG_DIR = os.path.join(REPORT_DIR, "logs")
 DOWNLOAD_DIR = os.path.abspath(os.path.join(REPORT_DIR, "downloads"))
+_abort_reason = None
 
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 os.makedirs(VIDEO_DIR, exist_ok=True)
@@ -58,6 +59,19 @@ def pytest_addoption(parser):
         default="pc",
         choices=["pc", "mobile"],
         help="테스트 실행 플랫폼 선택 (pc 또는 mobile)"
+    )
+
+    parser.addoption(
+        "-U", "--user-id",
+        action="store",
+        default=None,
+        help="테스트에 사용할 계정 ID (미입력 시 STANDARD_USER 적용)"
+    )
+    parser.addoption(
+        "-P", "--user-pw",
+        action="store",
+        default=None,
+        help="테스트에 사용할 계정 비밀번호 (미입력 시 기본 PASSWORD 적용)"
     )
 
 @pytest.fixture(scope="function")
@@ -146,11 +160,11 @@ def driver(request):
             print(f"[브라우저 종료 경고] {e}")
 
 @pytest.fixture(scope="function")
-def logged_in_driver(driver):
+def logged_in_driver(driver, credentials):
     login_page = LoginPage(driver)
     login_page.load()
-    # FIXME 필요한 계정으로 수정
-    login_page.login(Config.STANDARD_USER, Config.PASSWORD)
+    
+    login_page.login(credentials["username"], credentials["password"])
     return driver
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -212,6 +226,8 @@ def pytest_runtest_makereport(item, call):
             jira_enabled = item.config.getoption("--jira")
             jira_enabled = jira_enabled != False  # Jira 티켓 자동 생성 여부
 
+            jira_issue = None
+
             # 실패 사유 추출 및 Jira 버그 이슈 자동 생성
             if jira_enabled:
                 error_msg = str(call.excinfo.value) if call.excinfo else rep.longreprtext
@@ -256,6 +272,18 @@ def pytest_runtest_makereport(item, call):
                 
                 rep.extras = extras
 
+        # 로그인 실패 시 나머지 테스트 전체 중단
+        if "critical_login" in item.keywords:
+            creds = item.funcargs.get("credentials", {})
+            target_user = creds.get("username", "알 수 없음")
+            abort_msg = (
+                f"로그인 실패(계정: `{target_user}`, 테스트: `{item.name}`)로 인해 "
+                f"나머지 테스트를 모두 중단했습니다."
+            )
+            _abort_reason = abort_msg
+            item.config._abort_reason = abort_msg
+            item.session.shouldstop = abort_msg
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionfinish(session, exitstatus):
     """세선 종료 직후 최종 통계 확정 및 config에 저장"""
@@ -278,6 +306,7 @@ def pytest_sessionfinish(session, exitstatus):
         "not_run": not_run,
         "elapsed": elapsed,
         "report_path": getattr(session.config.option, "htmlpath", None),
+        "abort_reason": getattr(session.config, "_abort_reason", None),
     }
 
 
@@ -294,10 +323,10 @@ def pytest_runtest_setup(item):
     if not _has_sent_start_alert:
         _test_start_time = time.time()
         _total_collected_tests = len(item.session.items)
-        # if item.config.getoption("--slack"):
     
-    if slack_enabled:
-        slack_notifier.send_start_notification(_total_collected_tests, platform_label=platform_name.upper())
+        if slack_enabled:
+            slack_notifier.send_start_notification(_total_collected_tests, platform_label=platform_name.upper())
+
     _has_sent_start_alert = True
 
 def pytest_html_report_title(report):
@@ -418,17 +447,20 @@ def pytest_unconfigure(config):
     slack_enabled = config.getoption("--slack")
     slack_enabled = slack_enabled != False  # Slack 알림 활성화 여부
 
-    if slack_enabled:
-        if summary_stats and summary_stats["total"] > 0:
-            slack_notifier.send_finish_notification(
-                total=summary_stats["total"],
-                passed=summary_stats["passed"],
-                failed=summary_stats["failed"],
-                not_run=summary_stats["not_run"],
-                elapsed_seconds=summary_stats["elapsed"],
-                report_path=summary_stats["report_path"],
-                platform_label=config.getoption("--platform").upper()
-            )
+    final_abort_reason = _abort_reason or getattr(config, "_abort_reason", None)
+    
+    # if slack_enabled:
+    if summary_stats and summary_stats["total"] > 0:
+        slack_notifier.send_finish_notification(
+            total=summary_stats["total"],
+            passed=summary_stats["passed"],
+            failed=summary_stats["failed"],
+            not_run=summary_stats["not_run"],
+            elapsed_seconds=summary_stats["elapsed"],
+            report_path=summary_stats["report_path"],
+            platform_label=config.getoption("--platform").upper(),
+            abort_reason=final_abort_reason,
+        )
 
 def _format_duration(elapsed_seconds):
     """초(float) 단위 시간을 hh:mm:ss 문자열로 변환"""
@@ -437,4 +469,13 @@ def _format_duration(elapsed_seconds):
     minutes, seconds = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
+@pytest.fixture(scope="session")
+def credentials(request):
+    """--user-id, --user-pw이 있으면 우선 적용 / 없거나 빈 값이면 기본값 반환"""
+    cli_id = request.config.getoption("--user-id")
+    cli_pw = request.config.getoption("--user-pw")
 
+    return {
+        "username": cli_id.strip() if cli_id and cli_id.strip() else Config.STANDARD_USER,
+        "password": cli_pw if cli_pw else Config.PASSWORD,
+    }
