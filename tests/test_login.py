@@ -8,8 +8,8 @@ def test_login_success(driver):
     inventory_page = InventoryPage(driver)
 
     login_id = Config.STANDARD_USER
-    login_password = Config.PASSWORD
-    # login_password = "ddddd"
+    # login_password = Config.PASSWORD
+    login_password = "ddddd"
     login_page.load()
     login_page.login(login_id, login_password)
 

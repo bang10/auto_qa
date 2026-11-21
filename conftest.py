@@ -211,16 +211,21 @@ def pytest_runtest_makereport(item, call):
                 platform_label=platform_label
             )
 
+            slack_enabled = item.config.getoption("--slack")
+            slack_enabled = slack_enabled != False  # Slack 알림 활성화 여부
+
             # 실패 사유 추출
             error_msg = str(call.excinfo.value) if call.excinfo else rep.longreprtext
-            slack_notifier.send_failure_notification(
-                test_name=item.name,
-                description=description,
-                error_msg=error_msg,
-                screenshot_path=screenshot_path,
-                jira_issue=jira_issue,
-                platform_label=platform_label
-            )
+
+            if slack_enabled:
+                slack_notifier.send_failure_notification(
+                    test_name=item.name,
+                    description=description,
+                    error_msg=error_msg,
+                    screenshot_path=screenshot_path,
+                    jira_issue=jira_issue,
+                    platform_label=platform_label
+                )
 
             # pytest-html 리포트 첨부
             pytest_html = item.config.pluginmanager.getplugin("html")
@@ -266,6 +271,8 @@ def pytest_sessionfinish(session, exitstatus):
 def pytest_runtest_setup(item):
     global _has_sent_start_alert, _test_start_time, _total_collected_tests
     platform_name = item.config.getoption("--platform").lower()
+    slack_enabled = item.config.getoption("--slack")
+    slack_enabled = slack_enabled != False  # Slack 알림 활성화 여부
     
     # pytest.mark.mobile_only가 붙은 테스트는 PC 플랫폼에서 실행 시 스킵
     if "mobile_only" in item.keywords and platform_name != "mobile":
@@ -275,8 +282,10 @@ def pytest_runtest_setup(item):
         _test_start_time = time.time()
         _total_collected_tests = len(item.session.items)
         # if item.config.getoption("--slack"):
+    
+    if slack_enabled:
         slack_notifier.send_start_notification(_total_collected_tests, platform_label=platform_name.upper())
-        _has_sent_start_alert = True
+    _has_sent_start_alert = True
 
 def pytest_html_report_title(report):
     """리포트 제목"""
@@ -393,16 +402,20 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 def pytest_unconfigure(config):
     summary_stats = getattr(config, "_summary_stats", None)
-    if summary_stats and summary_stats["total"] > 0:
-        slack_notifier.send_finish_notification(
-            total=summary_stats["total"],
-            passed=summary_stats["passed"],
-            failed=summary_stats["failed"],
-            not_run=summary_stats["not_run"],
-            elapsed_seconds=summary_stats["elapsed"],
-            report_path=summary_stats["report_path"],
-            platform_label=config.getoption("--platform").upper()
-        )
+    slack_enabled = config.getoption("--slack")
+    slack_enabled = slack_enabled != False  # Slack 알림 활성화 여부
+
+    if slack_enabled:
+        if summary_stats and summary_stats["total"] > 0:
+            slack_notifier.send_finish_notification(
+                total=summary_stats["total"],
+                passed=summary_stats["passed"],
+                failed=summary_stats["failed"],
+                not_run=summary_stats["not_run"],
+                elapsed_seconds=summary_stats["elapsed"],
+                report_path=summary_stats["report_path"],
+                platform_label=config.getoption("--platform").upper()
+            )
 
 def _format_duration(elapsed_seconds):
     """초(float) 단위 시간을 hh:mm:ss 문자열로 변환"""
