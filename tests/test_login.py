@@ -10,8 +10,8 @@ def test_login_success(driver, credentials):
     inventory_page = InventoryPage(driver)
 
     login_id = credentials["username"]
-    # login_password = credentials["password"]
-    login_password = "ddddd" 
+    login_password = credentials["password"]
+    # login_password = "ddddd" 
     login_page.load()
     login_page.login(login_id, login_password)
 
