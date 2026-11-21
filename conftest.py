@@ -44,6 +44,14 @@ def pytest_addoption(parser):
         default=False,
         help="테스트 시작, 실패, 종료 시 Slack 알림을 전송합니다."
     )
+
+    parser.addoption(
+        "--jira",
+        action="store_true",
+        default=False,
+        help="테스트 실패 시 Jira 티켓을 자동 생성합니다."
+    )
+    
     parser.addoption(
         "--platform",
         action="store",
@@ -200,16 +208,21 @@ def pytest_runtest_makereport(item, call):
                 error_msg = rep.longreprtext
             
             platform_label = item.config.getoption("--platform").upper()
+            
+            jira_enabled = item.config.getoption("--jira")
+            jira_enabled = jira_enabled != False  # Jira 티켓 자동 생성 여부
+
             # 실패 사유 추출 및 Jira 버그 이슈 자동 생성
-            error_msg = str(call.excinfo.value) if call.excinfo else rep.longreprtext
-            jira_issue = jira_notifier.create_bug_issue(
-                test_name=item.name,
-                scenario=description,
-                error_msg=error_msg,
-                screenshot_path=screenshot_path,
-                video_path=video_path,
-                platform_label=platform_label
-            )
+            if jira_enabled:
+                error_msg = str(call.excinfo.value) if call.excinfo else rep.longreprtext
+                jira_issue = jira_notifier.create_bug_issue(
+                    test_name=item.name,
+                    scenario=description,
+                    error_msg=error_msg,
+                    screenshot_path=screenshot_path,
+                    video_path=video_path,
+                    platform_label=platform_label
+                )
 
             slack_enabled = item.config.getoption("--slack")
             slack_enabled = slack_enabled != False  # Slack 알림 활성화 여부
