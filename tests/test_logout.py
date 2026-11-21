@@ -19,9 +19,9 @@ def test_block_direct_access_after_logout(logged_in_driver):
     login_page = LoginPage(logged_in_driver)
 
     inventory_page.click_logout()
-    assert login_page.is_displayed(login_page.LOGIN_BUTTON) is True
+    assert login_page.is_displayed(login_page.LOGIN_BUTTON) is True, "로그아웃 후 로그인 화면으로 진입하지 않습니다."
 
     logged_in_driver.get(Config.INVENTORY_URL)
 
-    assert logged_in_driver.current_url == login_page.URL
-    assert "You can only access '/inventory.html' when you are logged in." in login_page.get_error_message()
+    assert logged_in_driver.current_url == login_page.URL, "로그아웃 후 로그인 화면으로 진입하지 않습니다."
+    assert "You can only access '/inventory.html' when you are logged in." in login_page.get_error_message(), "로그아웃 후 URL 검색으로 진입 시도 시, 경고 메세지가 미노출됩니다."

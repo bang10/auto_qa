@@ -2,6 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as EC
 from pages.base_page import BasePage
+from config.config import Config
 
 class DynamicCatalogPage(BasePage):
     LAZY_TITLE = (By.CLASS_NAME, "Dynamic Catalog - Lazy Load")
@@ -48,7 +49,6 @@ class DynamicCatalogPage(BasePage):
     def is_spinner_content_displayed(self):
         return self.is_displayed(self.SPINNER_RESULT_ICON)
 
-    # FIXME Slider 제어
     def get_slider_dots(self):
         # 닷 요소들이 화면에 렌더링될 때까지 대기 후 전체 리스트 반환
         self.find(self.SLIDER_DOTS)
@@ -70,7 +70,7 @@ class DynamicCatalogPage(BasePage):
             lambda d: d.find_elements(*self.SLIDER_DOTS)[index].get_attribute("aria-current") == "true"
         )
 
-    def wait_for_auto_slide_change(self, initial_index, timeout=5):
+    def wait_for_auto_slide_change(self, initial_index, timeout=Config.DEFAULT_TIMEOUT):
         # 약 2초 간격 자동 슬라이드로 인해 활성 닷 인덱스가 바뀔 때까지 대기
         from selenium.webdriver.support.ui import WebDriverWait
         WebDriverWait(self.driver, timeout).until(

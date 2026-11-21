@@ -31,3 +31,10 @@ class CheckoutStepOnePage(BasePage):
         return self.get_text(self.ERROR_MESSAGE)
 
     
+    def get_entered_shipping_info(self):
+        """입력 필드에 실제로 채워진 값 조회"""
+        return {
+            "first_name": self.find(self.FIRST_NAME_INPUT).get_attribute("value"),
+            "last_name": self.find(self.LAST_NAME_INPUT).get_attribute("value"),
+            "postal_code": self.find(self.POSTAL_CODE_INPUT).get_attribute("value"),
+        }

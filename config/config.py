@@ -20,6 +20,19 @@ class Config:
     HEADLESS = os.getenv("HEADLESS", "false").lower() == "true"
     DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "10"))
 
+    # Slack
+    SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+    SLACK_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID")
+    SLACK_ENABLED = os.getenv("SLACK_ENABLED", "false").lower() == "true"
+
+    # Jira 설정
+    JIRA_ENABLED = os.getenv("JIRA_ENABLED", "false").lower() == "true"
+    JIRA_URL = os.getenv("JIRA_URL", "").rstrip("/")
+    JIRA_EMAIL = os.getenv("JIRA_EMAIL")
+    JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+    JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
+    JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "버그")
+
     @classmethod
     def validate(cls):
         if not cls.BASE_URL:
@@ -38,5 +51,9 @@ class Config:
             raise ValueError("환경 변수 'ERROR_USER'가 설정되지 않았습니다.")
         if not cls.VISUAL_USER:
             raise ValueError("환경 변수 'VISUAL_USER'가 설정되지 않았습니다.")
+        if not cls.SLACK_BOT_TOKEN or not cls.SLACK_CHANNEL_ID:
+            raise ValueError("환경 변수 'Slack'가 설정되지 않았습니다.")
+        
+        
         
     
