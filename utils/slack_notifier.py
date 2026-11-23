@@ -86,7 +86,7 @@ class SlackNotifier:
         summary_text = (
         f"{header}\n"
         f"{reason_line}"
-        f"*실행 결과:* 총 *{total}건*, pass *{passed}건*, fail *{failed}건*, 미진행 *{not_run}건*\n"
+        f"*실행 결과:* 총 *{total}건*, pass *{passed}건*, fail *{failed}건*, 미진행 *{not_run}건*, 성공률 *{round((passed/total)*100, 2) if total > 0 else 0}%*\n"
         f"*소요 시간:* {duration_str}"
         )
         try:
