@@ -26,7 +26,7 @@ Python, Selenium, Pytest 기반의 **웹 테스트 자동화**입니다.
 * **Selenium 주요 예외 처리**
   * `TimeoutException`, `NoSuchElementException` 발생 시 메모리 주소나 스택 대신 **대기 시간, 대상 요소, 테스트 페이지 URL**등으로 변환합니다.
 
-### 5. 종합 HTML 리포트 Slack / Jira 연동
+### 5. 종합 HTML 리포트 Slack / Jira 연동 - [미리보기](#리포트-및-알림)
 * **종합 HTML 보고서:** 상단에 **조기 중단 발생 시 조기 중단 경고 배너**와 **총 테스트(Total), 성공(Pass), 실패(Fail), 미진행(Not Run), 통과율 및 소요 시간(`hh:mm:ss`)**을 기재합니다.
 * **Jira Cloud API 연동:** 테스트 실패 시 `[PLATFORM] [자동화 실패] 테스트명` 제목과 이슈 티켓의 본문(시나리오, 환경 정보, 정제된 실패 사유 코드 블록)으로 버그 티켓을 자동 생성하고, **스크린샷과 실행 영상을 티켓에 자동 첨부**합니다.
 * **Slack 실시간 알림**
@@ -156,12 +156,30 @@ HEADLESSS=true python3 -m pytest
 ```
 
 ## 리포트 및 알림
-* 종합 HTML 보고서 : `report_<platform>_YYYYMMDD_HHMMSS.html`
-  *   상단 요약 카드(총 건수 / Pass / Fail / 미진행 / 통과율·소요시간) 및 필수 로그인 실패 시 테스트 세션 조기 종료 경고 배너 표시
-  *   실패 케이스인 경우 스크린 샷 및 동영상 링크 기재
-* Jira 이슈 생성 : `[platform] [테스트 실패] <테스트명>` 
-  *   테스트 시나리오, 실행 환경, 실패 사유 및 첨부 파일 (스크린 샷, 동영상) 자동 등록
-* Slack 알림
+### Slack 알림
   *   시작 알림
   *   실패 시 캡처 화면, 요약, Jira 티켓 링크 전송
   *   정상 종료 또는 조기 종료 결과 및 보고서 파일 첨부
+
+| **테스트 시작 알림** | **실패 발생 및 Jira 티켓 링크** |
+| :---: | :---: |
+| ![Slack 시작 알림](docs/images/slack_start_alarm.png) | ![Slack 실패 알림](docs/images/slack_issue.png) |
+| **로그인 실패 시 조기 종료 알림** | **테스트 종료 알림 (실패 없음)** |
+| ![Slack 조기 종료 알림](docs/images/slack_finsh_fail_login.png) | ![Slack 정상 종료 알림](docs/images/slack_finish_pass.png) |
+| **테스트 종료 알림 (실패 존재)** | |
+| ![Slack 실패 포함 종료 알림](docs/images/slack_finish_fail_alarm.png) | |
+
+### Jira 이슈 생성 : `[platform] [테스트 실패] <테스트명>` 
+  *   테스트 시나리오, 실행 환경, 실패 사유 및 첨부 파일 (스크린 샷, 동영상) 자동 등록
+
+| **PC 환경 이슈** | **Mobile 환경 이슈** |
+| :---: | :---: |
+| ![PC 환경 이슈](docs/images/jira_pc.png) | ![Mobile 환경 이슈](docs/images/jira_mobile.png) |
+
+### 종합 HTML 보고서 : `report_<platform>_YYYYMMDD_HHMMSS.html`
+  *   상단 요약 카드(총 건수 / Pass / Fail / 미진행 / 통과율·소요시간) 및 필수 로그인 실패 시 테스트 세션 조기 종료 경고 배너 표시
+  *   실패 케이스인 경우 스크린 샷 및 동영상 링크 기재
+
+| **조기 종료 리포트** | **종료 리포트** |
+| :---: | :---: |
+| ![조기 종료 리포트](docs/images/report_login_fail.png) | ![종료 리포트](docs/images/report.png) |

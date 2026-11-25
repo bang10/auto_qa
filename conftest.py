@@ -479,8 +479,7 @@ def pytest_unconfigure(config):
 
     final_abort_reason = _abort_reason or getattr(config, "_abort_reason", None)
     
-    # if slack_enabled:
-    if summary_stats and summary_stats["total"] > 0:
+    if slack_enabled and summary_stats and summary_stats["total"] > 0:
         slack_notifier.send_finish_notification(
             total=summary_stats["total"],
             passed=summary_stats["passed"],
