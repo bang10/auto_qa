@@ -1,4 +1,4 @@
-# SauceDemo Web Test Automation
+# SauceDemo Web 자동화 테스트
 
 Python, Selenium, Pytest 기반의 **웹 테스트 자동화**입니다.  
 **Mobile Web / PC Web 환경 순차 실행**, **실행 우선순위 제어 및 필수 로그인 실패 시 조기 중단**, **CLI 동적 계정 바인딩**, **실패 스크린샷 / 동영상 자동 저장 및 예외 가독성 처리**, **종합 HTML 리포트 Slack / Jira 연동**을 구현했습니다.
